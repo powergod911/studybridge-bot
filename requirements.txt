@@ -1,0 +1,9 @@
+aiogram>=3.4
+sqlalchemy>=2.0
+alembic
+asyncpg
+redis
+python-dotenv
+google-genai
+openai
+pillow
