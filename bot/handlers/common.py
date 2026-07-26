@@ -9,22 +9,13 @@ from bot.db.logging import log_study_interaction
 from bot.engines.deepseek import DeepSeekClient
 from bot.engines.errors import AIBusyError
 from bot.engines.gemini import GeminiClient
+from bot.formatting import format_telegram_text, split_telegram_text
 from bot.router import Engine
 
 logger = logging.getLogger(__name__)
 
 BUSY_TEXT = "That AI's busy right now - try again in a moment."
 ERROR_TEXT = "I hit an error while answering that. Try again in a moment."
-
-
-def split_telegram_text(text: str, limit: int = 3900) -> list[str]:
-    chunks: list[str] = []
-    remaining = text.strip()
-    while remaining:
-        chunks.append(remaining[:limit])
-        remaining = remaining[limit:]
-    return chunks or ["I could not generate an answer."]
-
 
 async def answer_text_question(
     message: Message,
@@ -50,7 +41,7 @@ async def answer_text_question(
         await message.answer(ERROR_TEXT)
         return
 
-    for chunk in split_telegram_text(answer):
+    for chunk in split_telegram_text(format_telegram_text(answer)):
         await message.answer(chunk)
 
 
@@ -74,5 +65,5 @@ async def answer_photo_question(
         await message.answer(ERROR_TEXT)
         return
 
-    for chunk in split_telegram_text(answer):
+    for chunk in split_telegram_text(format_telegram_text(answer)):
         await message.answer(chunk)

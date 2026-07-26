@@ -1,1 +1,1 @@
-"""StudyBridge Telegram bot."""
+"""Shadow Mentor Telegram bot and Mini App."""

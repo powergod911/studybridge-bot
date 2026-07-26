@@ -8,8 +8,13 @@ DEEPSEEK_MODEL = "deepseek-ai/deepseek-v4-pro"
 GEMINI_MODEL = "gemini-3.5-flash"
 PHOTO_DEFAULT_PROMPT = "Explain this study diagram step-by-step."
 
-DEEPSEEK_RE = re.compile(r"\b(solve|calculate|derive|prove|equation|algorithm|code)\b", re.IGNORECASE)
+DEEPSEEK_RE = re.compile(
+    r"\b(solve|calculate|derive|prove|equation|algorithm|code|math|physics)\b"
+    r"|ගණනය|විසඳ|සමීකරණ|ව්‍යුත්පන්න",
+    re.IGNORECASE,
+)
 GEMINI_RE = re.compile(r"\b(explain|describe|summarize|what is|why)\b", re.IGNORECASE)
+MATH_RE = re.compile(r"(?:\d\s*[+\-*/=^]\s*\d)|(?:[a-zA-Z]\s*=\s*[^=])")
 
 
 class Engine(StrEnum):
@@ -36,7 +41,7 @@ def route_text(text: str) -> Route:
         return Route(engine=Engine.DEEPSEEK, prompt=strip_command(stripped))
     if lowered.startswith("/gem"):
         return Route(engine=Engine.GEMINI, prompt=strip_command(stripped))
-    if DEEPSEEK_RE.search(stripped):
+    if DEEPSEEK_RE.search(stripped) or MATH_RE.search(stripped):
         return Route(engine=Engine.DEEPSEEK, prompt=stripped)
     if GEMINI_RE.search(stripped):
         return Route(engine=Engine.GEMINI, prompt=stripped)

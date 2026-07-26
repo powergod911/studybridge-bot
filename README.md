@@ -1,104 +1,93 @@
-# StudyBridge Bot
+# Shadow Mentor
 
-Telegram bot for a private A/L study group. It routes commands, text, and photos to DeepSeek via NVIDIA NIM or Gemini 3.5 Flash, logs each interaction in Postgres, and uses Redis-backed aiogram FSM storage.
+Shadow Mentor is a Telegram Mini App and bot for Sri Lankan G.C.E. A/L students. The
+Railway service hosts the web interface, validates Telegram users, receives bot updates
+through a webhook, and routes questions to DeepSeek through NVIDIA NIM or Gemini.
 
-## Before VPS Deployment
+## What Students Get
 
-Run these checks on Shadow before editing `.env` or deploying:
+- A Telegram-native chat interface
+- Properly rendered Markdown and LaTeX equations
+- DeepSeek, Gemini, or automatic model routing
+- Gemini image questions
+- Sinhala and English answers
+- Plain-text fallback through ordinary bot messages
 
-```bash
-docker network ls
-docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Networks}}'
-```
+## Railway Architecture
 
-Confirm:
+One Railway application service runs FastAPI and the Telegram webhook. Add Railway
+PostgreSQL and Redis services to the same project. `railway.json` runs Alembic before
+each deployment and checks `/health` before promoting the new version.
 
-- The existing bots' Docker network name. If it is not `bots_default`, edit `docker-compose.yml` to match.
-- The Postgres container hostname on that network. The default `.env.example` assumes `postgres`.
-- The Redis container hostname and DB indexes already in use. This project defaults to Redis DB `2`.
+Required application variables:
 
-If those cannot be confirmed from the VPS, stop and inspect the existing compose files before deploying.
-
-## Configure
-
-```bash
-cp .env.example .env
-```
-
-Fill:
-
-```bash
+```text
 TELEGRAM_BOT_TOKEN=
 GEMINI_API_KEY=
 NVIDIA_API_KEY=
-POSTGRES_DSN=postgresql+asyncpg://studybridge_user:PASSWORD@postgres:5432/studybridge
-REDIS_URL=redis://redis:6379/2
+POSTGRES_DSN=${{Postgres.DATABASE_URL}}
+REDIS_URL=${{Redis.REDIS_URL}}
+WEBAPP_URL=https://YOUR-DOMAIN.up.railway.app
 ```
 
-Use a new BotFather bot token. Do not reuse Mai, Paddock, or Mohini tokens.
+`POSTGRES_DSN` accepts both Railway's `postgresql://` URL and an explicit
+`postgresql+asyncpg://` URL.
 
-Recommended BotFather setting for v1:
+Optional variables:
 
 ```text
-/setprivacy -> Enable
+TELEGRAM_AUTH_MAX_AGE_SECONDS=86400
+WEB_RATE_LIMIT_PER_MINUTE=12
+SHADOW_MENTOR_DEV_MODE=false
 ```
 
-With privacy mode on, students should use `/deep`, `/gem`, reply to the bot, or mention it.
-
-## Create Database/User
-
-Use the real Postgres container name from `docker ps`.
-
-```bash
-docker exec -it POSTGRES_CONTAINER psql -U postgres
-```
-
-Then in `psql`:
-
-```sql
-CREATE DATABASE studybridge;
-CREATE USER studybridge_user WITH PASSWORD 'CHANGE_ME';
-GRANT ALL PRIVILEGES ON DATABASE studybridge TO studybridge_user;
-\c studybridge
-GRANT ALL ON SCHEMA public TO studybridge_user;
-```
-
-## Run Migrations
-
-After `.env` is filled:
-
-```bash
-docker compose run --rm studybridge alembic upgrade head
-```
+Never enable `SHADOW_MENTOR_DEV_MODE` on Railway. It bypasses Telegram authentication
+only when testing the UI locally.
 
 ## Deploy
 
-```bash
-docker compose up -d --build
-docker logs -f studybridge_bot
+1. Connect this GitHub repository to the existing Railway application service.
+2. Add Railway PostgreSQL and Redis services.
+3. Set the variables above.
+4. Generate a public Railway domain.
+5. Set `WEBAPP_URL` to that HTTPS domain and redeploy.
+6. Open the bot and send `/start` or `/app`.
+
+The application configures the Telegram webhook and chat menu button during startup.
+Only one Railway replica should be used unless webhook update deduplication is added.
+
+## BotFather
+
+In `@BotFather`, open:
+
+```text
+/mybots
+Select Shadow Mentor
+Bot Settings
+Configure Mini App
+Enable Mini App
 ```
 
-This compose file starts only `studybridge_bot` and joins the existing external Docker network. It does not restart Mai, Paddock, Mohini, Postgres, or Redis.
+Use the same HTTPS Railway domain when BotFather asks for the Mini App URL.
 
-## GitHub Flow
+## Local Bot
 
-From this folder:
-
-```bash
-git init
-git add .
-git commit -m "Initial StudyBridge bot MVP"
-git branch -M main
-git remote add origin git@github.com:YOUR_USER/studybridge.git
-git push -u origin main
-```
-
-On the VPS:
+Copy `.env.example` to `.env`, fill the values, and run:
 
 ```bash
-git clone git@github.com:YOUR_USER/studybridge.git
-cd studybridge
-cp .env.example .env
+python -m bot.main
 ```
 
-Fill `.env`, verify Docker network names, run migrations, then deploy.
+This local command switches Telegram back to polling. Do not run it while the Railway
+deployment is serving the same bot token.
+
+## Local Web Preview
+
+Set `SHADOW_MENTOR_DEV_MODE=true`, provide working PostgreSQL and Redis URLs, then run:
+
+```bash
+uvicorn web.main:app --reload
+```
+
+Open `http://127.0.0.1:8000`. Preview mode can call the API without Telegram init data,
+so it must never be enabled in production.

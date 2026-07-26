@@ -22,10 +22,31 @@ async def log_study_interaction(
         logger.warning("Skipping study log because message has no from_user")
         return
 
-    row = StudyLog(
+    await log_study_interaction_values(
+        db_sessionmaker,
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         chat_id=message.chat.id,
+        question=question,
+        engine=engine,
+        subject_tag=subject_tag,
+    )
+
+
+async def log_study_interaction_values(
+    db_sessionmaker: async_sessionmaker[AsyncSession],
+    *,
+    telegram_id: int,
+    username: str | None,
+    chat_id: int,
+    question: str,
+    engine: Engine,
+    subject_tag: str | None = None,
+) -> None:
+    row = StudyLog(
+        telegram_id=telegram_id,
+        username=username,
+        chat_id=chat_id,
         question=question,
         engine_used=engine.value,
         subject_tag=subject_tag,

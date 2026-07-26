@@ -3,12 +3,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from aiogram import Router
+from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from bot.config import RULES_TEXT
+from bot.config import RULES_TEXT, Settings
 from bot.engines.deepseek import DeepSeekClient
 from bot.engines.gemini import GeminiClient
 from bot.handlers.common import answer_text_question
@@ -18,6 +19,7 @@ router = Router(name="commands")
 
 HELP_TEXT = (
     "/start - greeting and routing summary\n"
+    "/app - open the Shadow Mentor Mini App\n"
     "/help - list commands and usage\n"
     "/deep <question> - force DeepSeek for maths, physics, ICT, calculations, derivations, code\n"
     "/gem <question> - force Gemini for explanations, bio, chemistry, summaries, and images\n"
@@ -27,16 +29,45 @@ HELP_TEXT = (
 )
 
 START_TEXT = (
-    "StudyBridge is alive.\n\n"
+    "Shadow Mentor is ready.\n\n"
     "Use /deep for calculations, derivations, proofs, algorithms, and code.\n"
     "Use /gem for explanations, summaries, biology, chemistry structures, and images.\n"
-    "Photos go to Gemini vision automatically."
+    "Photos go to Gemini vision automatically.\n"
+    "For beautifully rendered equations and a full chat interface, open the study app."
 )
 
 
+def web_app_markup(settings: Settings) -> InlineKeyboardMarkup | None:
+    if not settings.webapp_url:
+        return None
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Open Shadow Mentor",
+                    web_app=WebAppInfo(url=settings.webapp_url),
+                )
+            ]
+        ]
+    )
+
+
 @router.message(Command("start"))
-async def start(message: Message) -> None:
-    await message.answer(START_TEXT)
+async def start(message: Message, settings: Settings) -> None:
+    markup = web_app_markup(settings) if message.chat.type == ChatType.PRIVATE else None
+    await message.answer(START_TEXT, reply_markup=markup)
+
+
+@router.message(Command("app"))
+async def app_command(message: Message, settings: Settings) -> None:
+    if message.chat.type != ChatType.PRIVATE:
+        await message.answer("Open a private chat with Shadow Mentor to launch the study app.")
+        return
+    markup = web_app_markup(settings)
+    if markup is None:
+        await message.answer("The Shadow Mentor Mini App is not configured yet.")
+        return
+    await message.answer("Open your study workspace:", reply_markup=markup)
 
 
 @router.message(Command("help"))

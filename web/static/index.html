@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f7f8f5">
+    <title>Shadow Mentor</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.css"
+      integrity="sha384-vlBdW0r3AcZO/HboRPznQNowvexd3fY8qHOWkBi5q7KGgqJ+F48+DceybYmrVbmB"
+      crossorigin="anonymous"
+    >
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/marked@17.0.1/lib/marked.umd.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.4.7/dist/purify.min.js"></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.js"
+      integrity="sha384-AtrdNsnxl/75rvBneBVH7DtOvCxSVahR2zWqle1coBKd8DEmLoviqNeJSx64gNAs"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/contrib/auto-render.min.js"
+      integrity="sha384-bjyGPfbij8/NDKJhSGZNP/khQVgtHUE5exjm4Ydllo42FwIgYsdLO2lXGmRBf5Mz"
+      crossorigin="anonymous"
+    ></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/lucide@1.16.0/dist/umd/lucide.min.js"></script>
+    <script defer src="/static/app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <i data-lucide="brain-circuit" data-fallback="Σ"></i>
+          </div>
+          <div class="brand-copy">
+            <h1>Shadow Mentor</h1>
+            <div class="status-line">
+              <span id="statusDot" class="status-dot"></span>
+              <span id="statusText">Ready</span>
+            </div>
+          </div>
+        </div>
+        <button id="newChatButton" class="icon-button" type="button" aria-label="Start new chat" title="New chat">
+          <i data-lucide="square-pen" data-fallback="+"></i>
+        </button>
+      </header>
+
+      <nav class="engine-tabs" aria-label="Answering model">
+        <button class="engine-tab is-active" type="button" data-engine="auto">Auto</button>
+        <button class="engine-tab" type="button" data-engine="deepseek">DeepSeek</button>
+        <button class="engine-tab" type="button" data-engine="gemini">Gemini</button>
+      </nav>
+
+      <div id="previewNotice" class="preview-notice" hidden>
+        Preview mode. Open from Telegram to send questions.
+      </div>
+
+      <main id="messages" class="messages" aria-live="polite" aria-label="Conversation"></main>
+
+      <section id="attachmentPreview" class="attachment-preview" hidden>
+        <img id="attachmentImage" alt="Selected study image">
+        <div class="attachment-meta">
+          <strong id="attachmentName"></strong>
+          <span id="attachmentSize"></span>
+        </div>
+        <button id="removeAttachmentButton" class="icon-button compact" type="button" aria-label="Remove image" title="Remove image">
+          <i data-lucide="x" data-fallback="×"></i>
+        </button>
+      </section>
+
+      <form id="composer" class="composer">
+        <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+        <button id="attachButton" class="icon-button composer-button" type="button" aria-label="Attach study image" title="Attach image">
+          <i data-lucide="paperclip" data-fallback="+"></i>
+        </button>
+        <textarea
+          id="messageInput"
+          rows="1"
+          maxlength="8000"
+          enterkeyhint="send"
+          aria-label="Ask Shadow Mentor"
+          placeholder="Ask your A/L question..."
+        ></textarea>
+        <button id="sendButton" class="send-button" type="submit" aria-label="Send question" title="Send">
+          <i data-lucide="arrow-up" data-fallback="↑"></i>
+        </button>
+      </form>
+    </div>
+  </body>
+</html>
