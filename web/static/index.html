@@ -16,7 +16,7 @@
       integrity="sha384-vlBdW0r3AcZO/HboRPznQNowvexd3fY8qHOWkBi5q7KGgqJ+F48+DceybYmrVbmB"
       crossorigin="anonymous"
     >
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css?v=20260726-2">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/marked@17.0.1/lib/marked.umd.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.4.7/dist/purify.min.js"></script>
@@ -33,11 +33,11 @@
       crossorigin="anonymous"
     ></script>
     <script defer src="https://cdn.jsdelivr.net/npm/lucide@1.16.0/dist/umd/lucide.min.js"></script>
-    <script defer src="/static/app.js"></script>
+    <script defer src="/static/app.js?v=20260726-2"></script>
   </head>
   <body>
-    <div id="historyScrim" class="history-scrim" hidden></div>
     <div class="app-frame">
+      <div id="historyScrim" class="history-scrim" hidden></div>
       <aside id="historyPanel" class="history-panel" aria-label="Chat history">
         <div class="history-header">
           <div class="history-brand">
@@ -77,6 +77,9 @@
       <section class="workspace">
         <header class="app-header">
           <div class="header-leading">
+            <button id="homeButton" class="icon-button home-button" type="button" aria-label="Back to main menu" title="Main menu" hidden>
+              <i data-lucide="arrow-left" data-fallback="<"></i>
+            </button>
             <button id="historyButton" class="icon-button history-toggle" type="button" aria-label="Open chat history" title="Chat history">
               <i data-lucide="panel-left" data-fallback="H"></i>
             </button>
