@@ -3,11 +3,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta id="themeColor" name="theme-color" content="#f4f7f6">
+    <meta id="themeColor" name="theme-color" content="#ffffff">
     <title>Shadow Mentor</title>
     <link rel="icon" type="image/png" href="/static/shadow-mentor.png">
     <script src="/static/theme-init.js"></script>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/space-grotesk/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono/index.css">
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.css"
@@ -34,70 +36,141 @@
     <script defer src="/static/app.js"></script>
   </head>
   <body>
-    <div class="app-shell">
-      <header class="app-header">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true">
+    <div id="historyScrim" class="history-scrim" hidden></div>
+    <div class="app-frame">
+      <aside id="historyPanel" class="history-panel" aria-label="Chat history">
+        <div class="history-header">
+          <div class="history-brand">
             <img src="/static/shadow-mentor.png" alt="">
-          </div>
-          <div class="brand-copy">
-            <h1>Shadow Mentor</h1>
-            <div class="status-line">
-              <span id="statusDot" class="status-dot"></span>
-              <span id="statusText">Ready</span>
+            <div>
+              <strong>Shadow Mentor</strong>
+              <span>Study archive</span>
             </div>
           </div>
-        </div>
-        <div class="header-actions">
-          <button id="themeButton" class="icon-button" type="button" aria-label="Switch to dark theme" title="Dark theme">
-            <i data-lucide="moon" data-fallback="◐"></i>
-          </button>
-          <button id="newChatButton" class="icon-button" type="button" aria-label="Start new chat" title="New chat">
-            <i data-lucide="square-pen" data-fallback="+"></i>
+          <button id="closeHistoryButton" class="icon-button mobile-only" type="button" aria-label="Close history" title="Close history">
+            <i data-lucide="x" data-fallback="x"></i>
           </button>
         </div>
-      </header>
 
-      <nav class="engine-tabs" aria-label="Answering model">
-        <button class="engine-tab is-active" type="button" data-engine="auto">Auto</button>
-        <button class="engine-tab" type="button" data-engine="deepseek">DeepSeek</button>
-        <button class="engine-tab" type="button" data-engine="gemini">Gemini</button>
-      </nav>
-
-      <div id="previewNotice" class="preview-notice" hidden>
-        Preview mode. Open from Telegram to send questions.
-      </div>
-
-      <main id="messages" class="messages" aria-live="polite" aria-label="Conversation"></main>
-
-      <section id="attachmentPreview" class="attachment-preview" hidden>
-        <img id="attachmentImage" alt="Selected study image">
-        <div class="attachment-meta">
-          <strong id="attachmentName"></strong>
-          <span id="attachmentSize"></span>
-        </div>
-        <button id="removeAttachmentButton" class="icon-button compact" type="button" aria-label="Remove image" title="Remove image">
-          <i data-lucide="x" data-fallback="×"></i>
+        <button id="historyNewChatButton" class="history-new-chat" type="button">
+          <i data-lucide="square-pen" data-fallback="+"></i>
+          <span>New conversation</span>
         </button>
+
+        <div class="history-label">
+          <span>Recent</span>
+          <span id="historyCount">0</span>
+        </div>
+        <div class="history-content">
+          <nav id="conversationList" class="conversation-list" aria-label="Recent conversations"></nav>
+          <div id="historyEmpty" class="history-empty">
+            Your solved problems will appear here.
+          </div>
+        </div>
+
+        <div class="history-footer">
+          <span class="system-pulse"></span>
+          <span>Encrypted Telegram session</span>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="app-header">
+          <div class="header-leading">
+            <button id="historyButton" class="icon-button history-toggle" type="button" aria-label="Open chat history" title="Chat history">
+              <i data-lucide="panel-left" data-fallback="H"></i>
+            </button>
+            <div class="brand">
+              <div class="brand-mark" aria-hidden="true">
+                <img src="/static/shadow-mentor.png" alt="">
+              </div>
+              <div class="brand-copy">
+                <h1>Shadow Mentor</h1>
+                <div class="status-line">
+                  <span id="statusDot" class="status-dot"></span>
+                  <span id="statusText">Ready</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <div class="model-control">
+              <button
+                id="modelButton"
+                class="icon-button model-button"
+                type="button"
+                aria-label="Choose AI model"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                title="Model: Auto"
+              >
+                <i data-lucide="brain-circuit" data-fallback="AI"></i>
+                <span class="model-dot" aria-hidden="true"></span>
+              </button>
+              <div id="modelMenu" class="model-menu" role="menu" hidden>
+                <div class="model-menu-label">Answering model</div>
+                <button class="model-option is-active" type="button" role="menuitemradio" aria-checked="true" data-engine="auto">
+                  <i data-lucide="wand-sparkles" data-fallback="A"></i>
+                  <span><strong>Auto</strong><small>Best model for the question</small></span>
+                  <i class="model-check" data-lucide="check" data-fallback="v"></i>
+                </button>
+                <button class="model-option" type="button" role="menuitemradio" aria-checked="false" data-engine="deepseek">
+                  <i data-lucide="sigma" data-fallback="D"></i>
+                  <span><strong>DeepSeek</strong><small>Maths, physics and code</small></span>
+                  <i class="model-check" data-lucide="check" data-fallback="v"></i>
+                </button>
+                <button class="model-option" type="button" role="menuitemradio" aria-checked="false" data-engine="gemini">
+                  <i data-lucide="sparkles" data-fallback="G"></i>
+                  <span><strong>Gemini</strong><small>Explanations and images</small></span>
+                  <i class="model-check" data-lucide="check" data-fallback="v"></i>
+                </button>
+              </div>
+            </div>
+            <button id="themeButton" class="icon-button" type="button" aria-label="Switch to dark theme" title="Dark theme">
+              <i data-lucide="moon" data-fallback="D"></i>
+            </button>
+            <button id="newChatButton" class="icon-button" type="button" aria-label="Start new chat" title="New chat">
+              <i data-lucide="square-pen" data-fallback="+"></i>
+            </button>
+          </div>
+        </header>
+
+        <div id="previewNotice" class="preview-notice" hidden>
+          Preview mode. Open from Telegram to send questions.
+        </div>
+
+        <main id="messages" class="messages" aria-live="polite" aria-label="Conversation"></main>
+
+        <section id="attachmentPreview" class="attachment-preview" hidden>
+          <img id="attachmentImage" alt="Selected study image">
+          <div class="attachment-meta">
+            <strong id="attachmentName"></strong>
+            <span id="attachmentSize"></span>
+          </div>
+          <button id="removeAttachmentButton" class="icon-button compact" type="button" aria-label="Remove image" title="Remove image">
+            <i data-lucide="x" data-fallback="x"></i>
+          </button>
+        </section>
+
+        <form id="composer" class="composer">
+          <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+          <button id="attachButton" class="icon-button composer-button" type="button" aria-label="Attach or paste study image" title="Attach image">
+            <i data-lucide="image-plus" data-fallback="+"></i>
+          </button>
+          <textarea
+            id="messageInput"
+            rows="1"
+            maxlength="8000"
+            enterkeyhint="send"
+            aria-label="Ask Shadow Mentor"
+            placeholder="Ask a follow-up or start a new problem..."
+          ></textarea>
+          <button id="sendButton" class="send-button" type="submit" aria-label="Send question" title="Send">
+            <i data-lucide="arrow-up" data-fallback="^"></i>
+          </button>
+        </form>
       </section>
-
-      <form id="composer" class="composer">
-        <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
-        <button id="attachButton" class="icon-button composer-button" type="button" aria-label="Attach study image" title="Attach image">
-          <i data-lucide="paperclip" data-fallback="+"></i>
-        </button>
-        <textarea
-          id="messageInput"
-          rows="1"
-          maxlength="8000"
-          enterkeyhint="send"
-          aria-label="Ask Shadow Mentor"
-          placeholder="Ask your A/L question..."
-        ></textarea>
-        <button id="sendButton" class="send-button" type="submit" aria-label="Send question" title="Send">
-          <i data-lucide="arrow-up" data-fallback="↑"></i>
-        </button>
-      </form>
     </div>
   </body>
 </html>

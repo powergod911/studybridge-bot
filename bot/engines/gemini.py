@@ -38,9 +38,15 @@ class GeminiClient:
         image_bytes: bytes,
         *,
         channel: ResponseChannel = "telegram",
+        history: Sequence[ChatTurn] | None = None,
     ) -> str:
         return await self._with_retry(
-            lambda: self._generate_image(prompt, image_bytes, channel=channel)
+            lambda: self._generate_image(
+                prompt,
+                image_bytes,
+                channel=channel,
+                history=history,
+            )
         )
 
     async def _with_retry(self, call: Callable[[], str]) -> str:
@@ -85,12 +91,13 @@ class GeminiClient:
         image_bytes: bytes,
         *,
         channel: ResponseChannel,
+        history: Sequence[ChatTurn] | None,
     ) -> str:
         with Image.open(BytesIO(image_bytes)) as source:
             image = source.convert("RGB").copy()
         response = self._client.models.generate_content(
             model=GEMINI_MODEL,
-            contents=[prompt, image],
+            contents=[prompt_with_history(prompt, history), image],
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt(channel),
                 temperature=0.35,
