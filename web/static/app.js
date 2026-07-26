@@ -6,6 +6,7 @@
   telegram?.expand();
 
   const elements = {
+    workspace: document.querySelector(".workspace"),
     messages: document.getElementById("messages"),
     composer: document.getElementById("composer"),
     input: document.getElementById("messageInput"),
@@ -25,6 +26,7 @@
     statusText: document.getElementById("statusText"),
     previewNotice: document.getElementById("previewNotice"),
     historyButton: document.getElementById("historyButton"),
+    homeButton: document.getElementById("homeButton"),
     closeHistory: document.getElementById("closeHistoryButton"),
     historyPanel: document.getElementById("historyPanel"),
     historyScrim: document.getElementById("historyScrim"),
@@ -146,37 +148,70 @@
     const welcome = document.createElement("section");
     welcome.className = "welcome";
     welcome.innerHTML = `
-      <div class="welcome-signal" aria-hidden="true">
-        <span>01</span><span>MENTOR ONLINE</span>
-      </div>
-      <div class="welcome-main">
-        <div class="welcome-mark"><img src="/static/shadow-mentor.png" alt=""></div>
-        <div>
-          <h2>${greeting()}${user?.first_name ? `, ${escapeHtml(user.first_name)}` : ""}.</h2>
-          <p>Bring the next question. Context stays with this conversation.</p>
+      <div class="mentor-core" aria-hidden="true">
+        <div class="core-frame">
+          <span class="core-corner core-corner-a"></span>
+          <span class="core-corner core-corner-b"></span>
+          <span class="core-corner core-corner-c"></span>
+          <span class="core-corner core-corner-d"></span>
+          <img src="/static/shadow-mentor.png" alt="">
+          <span class="core-scan"></span>
+        </div>
+        <div class="core-readout">
+          <span>SHADOW CORE</span>
+          <strong>ONLINE</strong>
         </div>
       </div>
-      <div class="subject-prompts" aria-label="Subject starters"></div>
+      <div class="welcome-console">
+        <div class="welcome-signal" aria-hidden="true">
+          <span>01</span><span>MENTOR ONLINE</span>
+        </div>
+        <div class="welcome-copy">
+          <h2>${greeting()}${user?.first_name ? `, ${escapeHtml(user.first_name)}` : ""}.</h2>
+          <p>Bring one problem at a time. Shadow Mentor will keep the thread as you work through it.</p>
+        </div>
+        <div class="subject-picker">
+          <button class="subject-launch" type="button" aria-label="Choose a subject" aria-expanded="false" title="Choose a subject">
+            <i data-lucide="library-big" data-fallback="S"></i>
+          </button>
+          <div>
+            <strong>Choose a subject</strong>
+            <span>Open focused A/L starters</span>
+          </div>
+        </div>
+        <div class="subject-prompts" aria-label="Subject starters" hidden></div>
+      </div>
     `;
 
     const subjects = welcome.querySelector(".subject-prompts");
     [
-      ["Combined Maths", "Help me solve this Combined Maths problem: "],
-      ["Physics", "Explain this Physics question step-by-step: "],
-      ["Chemistry", "Help me understand this Chemistry topic: "],
-      ["Biology", "Explain this Biology concept clearly: "],
-      ["ICT", "Help me with this A/L ICT question: "],
-    ].forEach(([label, value]) => {
+      ["Combined Maths", "sigma", "Help me solve this Combined Maths problem: "],
+      ["Physics", "atom", "Explain this Physics question step-by-step: "],
+      ["Chemistry", "flask-conical", "Help me understand this Chemistry topic: "],
+      ["Biology", "dna", "Explain this Biology concept clearly: "],
+      ["ICT", "binary", "Help me with this A/L ICT question: "],
+      ["General", "book-open", "Help me study this A/L topic: "],
+    ].forEach(([label, icon, value]) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "subject-prompt";
-      button.textContent = label;
+      button.innerHTML = `<i data-lucide="${icon}" data-fallback="S"></i><span>${label}</span>`;
       button.addEventListener("click", () => {
         elements.input.value = value;
         resizeInput();
         elements.input.focus();
       });
       subjects.appendChild(button);
+    });
+
+    const subjectLaunch = welcome.querySelector(".subject-launch");
+    subjectLaunch.addEventListener("click", () => {
+      const willOpen = subjects.hidden;
+      subjects.hidden = !willOpen;
+      subjectLaunch.setAttribute("aria-expanded", String(willOpen));
+      subjectLaunch.classList.toggle("is-active", willOpen);
+      if (willOpen) subjects.querySelector("button")?.focus();
+      refreshIcons();
     });
     elements.messages.appendChild(welcome);
   }
@@ -380,8 +415,18 @@
         elements.messages.appendChild(messageElement(message));
       });
     }
+    updateNavigation();
     refreshIcons();
     scrollToBottom(false);
+  }
+
+  function updateNavigation() {
+    const hasConversationView = state.messages.length > 0;
+    elements.workspace.classList.toggle("is-conversation", hasConversationView);
+    elements.homeButton.hidden = !hasConversationView;
+    elements.input.placeholder = hasConversationView
+      ? "Ask a follow-up..."
+      : "Ask a new problem...";
   }
 
   function showTyping() {
@@ -509,8 +554,16 @@
   }
 
   async function loadConversations() {
-    state.conversations = await requestJson("/api/conversations");
-    renderConversationList();
+    try {
+      state.conversations = await requestJson("/api/conversations");
+      elements.historyEmpty.textContent = "Your solved problems will appear here.";
+      renderConversationList();
+    } catch (error) {
+      elements.historyEmpty.hidden = false;
+      elements.historyEmpty.textContent =
+        error instanceof Error ? error.message : "History is unavailable.";
+      throw error;
+    }
   }
 
   async function openConversation(conversationId) {
@@ -518,6 +571,7 @@
       closeHistory();
       return;
     }
+    closeHistory();
     setStatus("Loading", "busy");
     try {
       const conversation = await requestJson(`/api/conversations/${conversationId}`);
@@ -531,7 +585,6 @@
       renderConversationList();
       renderMessages();
       setStatus("Ready");
-      closeHistory();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not load chat", "error");
     }
@@ -569,6 +622,22 @@
     closeHistory();
     elements.input.focus();
     telegram?.HapticFeedback?.impactOccurred("light");
+  }
+
+  function goHome() {
+    state.requestId += 1;
+    state.abortController?.abort();
+    state.abortController = null;
+    state.activeConversationId = null;
+    state.messages = [];
+    setBusy(false);
+    clearAttachment();
+    closeModelMenu();
+    renderConversationList();
+    renderMessages();
+    closeHistory();
+    elements.input.focus();
+    telegram?.HapticFeedback?.selectionChanged();
   }
 
   function openHistory() {
@@ -748,6 +817,7 @@
   elements.removeAttachment.addEventListener("click", clearAttachment);
   elements.newChat.addEventListener("click", startNewConversation);
   elements.historyNewChat.addEventListener("click", startNewConversation);
+  elements.homeButton.addEventListener("click", goHome);
   elements.historyButton.addEventListener("click", openHistory);
   elements.closeHistory.addEventListener("click", closeHistory);
   elements.historyScrim.addEventListener("click", closeHistory);

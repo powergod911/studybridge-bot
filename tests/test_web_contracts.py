@@ -71,13 +71,27 @@ class WebContractTests(unittest.TestCase):
         script = (ROOT / "web/static/app.js").read_text(encoding="utf-8")
         self.assertIn('id="conversationList"', html)
         self.assertIn('id="modelMenu"', html)
-        self.assertIn('["ICT", "Help me with this A/L ICT question: "]', script)
+        self.assertIn('["ICT", "binary", "Help me with this A/L ICT question: "]', script)
+        self.assertIn('id="homeButton"', html)
+        self.assertIn('class="subject-launch"', script)
+
+    def test_history_scrim_shares_the_drawer_stacking_context(self) -> None:
+        html = (ROOT / "web/static/index.html").read_text(encoding="utf-8")
+        app_frame = html.index('class="app-frame"')
+        scrim = html.index('id="historyScrim"')
+        panel = html.index('id="historyPanel"')
+        self.assertLess(app_frame, scrim)
+        self.assertLess(scrim, panel)
 
     def test_frontend_sends_conversation_and_accepts_pasted_images(self) -> None:
         script = (ROOT / "web/static/app.js").read_text(encoding="utf-8")
+        styles = (ROOT / "web/static/styles.css").read_text(encoding="utf-8")
         self.assertIn("conversation_id: state.activeConversationId", script)
         self.assertIn('elements.input.addEventListener("paste"', script)
         self.assertIn("imageItem?.getAsFile()", script)
+        self.assertIn(".app-header {\n  grid-row: 1;", styles)
+        self.assertIn(".messages {\n  grid-row: 3;", styles)
+        self.assertIn(".composer {\n  grid-row: 5;", styles)
 
 
 if __name__ == "__main__":
