@@ -1,21 +1,41 @@
 :root {
-  color-scheme: light dark;
-  --page: var(--tg-theme-bg-color, #f7f8f5);
-  --surface: var(--tg-theme-secondary-bg-color, #ffffff);
-  --text: var(--tg-theme-text-color, #17201d);
-  --muted: var(--tg-theme-hint-color, #69736f);
-  --line: color-mix(in srgb, var(--muted) 22%, transparent);
-  --primary: var(--tg-theme-button-color, #17765d);
-  --primary-text: var(--tg-theme-button-text-color, #ffffff);
+  color-scheme: light;
+  --page: #f4f7f6;
+  --surface: #ffffff;
+  --surface-raised: #f9fbfa;
+  --text: #14201c;
+  --muted: #68746f;
+  --line: #d8e0dd;
+  --primary: #13795f;
+  --primary-text: #ffffff;
+  --tech: #2f67d8;
   --accent: #d95f45;
   --warm: #f1c75b;
-  --user-bubble: color-mix(in srgb, var(--primary) 17%, var(--surface));
+  --user-bubble: #e1f1eb;
   --error: #bd3d3a;
   --shadow: 0 8px 28px rgba(20, 34, 29, 0.08);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     "Noto Sans Sinhala", sans-serif;
   letter-spacing: 0;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d1210;
+  --surface: #151c19;
+  --surface-raised: #1a231f;
+  --text: #e9f1ee;
+  --muted: #9aa8a2;
+  --line: #2c3934;
+  --primary: #49c59c;
+  --primary-text: #07140f;
+  --tech: #75a0ff;
+  --accent: #ff8065;
+  --warm: #e5b94f;
+  --user-bubble: #173b30;
+  --error: #ff7c79;
+  --shadow: 0 10px 32px rgba(0, 0, 0, 0.24);
 }
 
 * {
@@ -49,6 +69,18 @@ input {
 
 button {
   color: inherit;
+}
+
+::selection {
+  color: var(--primary-text);
+  background: var(--primary);
+}
+
+button:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--tech);
+  outline-offset: 2px;
 }
 
 i[data-lucide] {
@@ -87,6 +119,12 @@ i[data-lucide]::before {
   border-bottom: 1px solid var(--line);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .brand {
   min-width: 0;
   display: flex;
@@ -101,7 +139,7 @@ i[data-lucide]::before {
   overflow: hidden;
   border-radius: 8px;
   background: #050b22;
-  box-shadow: 0 0 0 1px rgba(51, 91, 255, 0.3);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tech) 48%, transparent);
 }
 
 .brand-mark img,
@@ -141,6 +179,7 @@ i[data-lucide]::before {
   height: 7px;
   border-radius: 50%;
   background: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 13%, transparent);
 }
 
 .status-dot.is-busy {
@@ -173,7 +212,8 @@ i[data-lucide]::before {
 
 .icon-button:hover,
 .icon-button:focus-visible {
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--tech);
+  background: color-mix(in srgb, var(--tech) 9%, transparent);
 }
 
 .icon-button:active,
@@ -203,6 +243,7 @@ i[data-lucide]::before {
 }
 
 .engine-tab {
+  position: relative;
   height: 34px;
   min-width: 0;
   border: 0;
@@ -214,10 +255,25 @@ i[data-lucide]::before {
   font-weight: 650;
 }
 
+.engine-tab::after {
+  position: absolute;
+  right: 18%;
+  bottom: -8px;
+  left: 18%;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  content: "";
+}
+
 .engine-tab.is-active {
   color: var(--text);
-  background: var(--surface);
-  box-shadow: 0 1px 6px rgba(20, 34, 29, 0.08);
+  background: var(--surface-raised);
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.engine-tab.is-active::after {
+  background: var(--tech);
 }
 
 .preview-notice {
@@ -251,7 +307,7 @@ i[data-lucide]::before {
   border-radius: 8px;
   background: #050b22;
   box-shadow:
-    0 0 0 1px rgba(51, 91, 255, 0.3),
+    0 0 0 1px color-mix(in srgb, var(--tech) 48%, transparent),
     0 8px 24px rgba(17, 36, 101, 0.18);
 }
 
@@ -280,14 +336,15 @@ i[data-lucide]::before {
   border: 1px solid var(--line);
   border-radius: 7px;
   color: var(--text);
-  background: var(--surface);
+  background: var(--surface-raised);
   cursor: pointer;
   font-size: 13px;
 }
 
 .subject-prompt:hover,
 .subject-prompt:focus-visible {
-  border-color: var(--primary);
+  border-color: var(--tech);
+  color: var(--tech);
 }
 
 .message {
@@ -308,7 +365,7 @@ i[data-lucide]::before {
   overflow: hidden;
   border-radius: 7px;
   background: #050b22;
-  box-shadow: 0 0 0 1px rgba(51, 91, 255, 0.22);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tech) 38%, transparent);
 }
 
 .message-body {
@@ -373,7 +430,7 @@ i[data-lucide]::before {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: var(--surface);
+  background: var(--surface-raised);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -483,7 +540,7 @@ i[data-lucide]::before {
   gap: 10px;
   padding: 7px 8px;
   border-top: 1px solid var(--line);
-  background: var(--surface);
+  background: var(--surface-raised);
 }
 
 .attachment-preview img {
@@ -518,9 +575,12 @@ i[data-lucide]::before {
   grid-template-columns: 40px minmax(0, 1fr) 40px;
   align-items: end;
   gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-  background: var(--page);
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .composer textarea {
@@ -529,7 +589,7 @@ i[data-lucide]::before {
   max-height: 132px;
   resize: none;
   overflow-y: auto;
-  padding: 10px 4px 8px;
+  padding: 9px 4px 7px;
   border: 0;
   outline: 0;
   color: var(--text);
@@ -551,6 +611,11 @@ i[data-lucide]::before {
   background: var(--primary);
 }
 
+.send-button:hover,
+.send-button:focus-visible {
+  filter: brightness(1.06);
+}
+
 .send-button:disabled,
 .icon-button:disabled,
 .engine-tab:disabled {
@@ -562,6 +627,7 @@ i[data-lucide]::before {
   .app-shell {
     border-right: 1px solid var(--line);
     border-left: 1px solid var(--line);
+    box-shadow: 0 0 40px color-mix(in srgb, var(--text) 5%, transparent);
     padding-right: 22px;
     padding-left: 22px;
   }

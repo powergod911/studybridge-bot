@@ -18,6 +18,8 @@
     attachmentSize: document.getElementById("attachmentSize"),
     removeAttachment: document.getElementById("removeAttachmentButton"),
     newChat: document.getElementById("newChatButton"),
+    theme: document.getElementById("themeButton"),
+    themeColor: document.getElementById("themeColor"),
     statusDot: document.getElementById("statusDot"),
     statusText: document.getElementById("statusText"),
     previewNotice: document.getElementById("previewNotice"),
@@ -26,6 +28,7 @@
 
   const user = telegram?.initDataUnsafe?.user;
   const storageKey = `shadow-mentor-chat:${user?.id || "preview"}`;
+  const themeStorageKey = "shadow-mentor-theme";
   const state = {
     engine: "auto",
     messages: loadMessages(),
@@ -38,8 +41,43 @@
     elements.previewNotice.hidden = false;
   }
 
+  function savedTheme() {
+    try {
+      return localStorage.getItem(themeStorageKey);
+    } catch {
+      return null;
+    }
+  }
+
+  function setTheme(theme, persist = false) {
+    const nextTheme = theme === "dark" ? "dark" : "light";
+    const isDark = nextTheme === "dark";
+    document.documentElement.dataset.theme = nextTheme;
+    elements.themeColor.content = isDark ? "#0d1210" : "#f4f7f6";
+    elements.theme.title = isDark ? "Light theme" : "Dark theme";
+    elements.theme.setAttribute(
+      "aria-label",
+      isDark ? "Switch to light theme" : "Switch to dark theme",
+    );
+    elements.theme.innerHTML = isDark
+      ? '<i data-lucide="sun" data-fallback="☀"></i>'
+      : '<i data-lucide="moon" data-fallback="◐"></i>';
+
+    if (persist) {
+      try {
+        localStorage.setItem(themeStorageKey, nextTheme);
+      } catch {
+        // Telegram may deny storage in restrictive privacy modes.
+      }
+    }
+
+    const colors = getComputedStyle(document.documentElement);
+    telegram?.setHeaderColor?.(colors.getPropertyValue("--page").trim());
+    telegram?.setBackgroundColor?.(colors.getPropertyValue("--page").trim());
+    refreshIcons();
+  }
+
   function loadMessages() {
-    let requestFailed = false;
     try {
       const parsed = JSON.parse(localStorage.getItem(storageKey) || "[]");
       if (!Array.isArray(parsed)) return [];
@@ -383,6 +421,7 @@
   async function sendQuestion() {
     const message = elements.input.value.trim();
     if ((!message && !state.image) || state.busy) return;
+    let requestFailed = false;
 
     const history = state.messages.slice(-10);
     const displayMessage = message || "Explain this image step-by-step.";
@@ -507,10 +546,20 @@
     telegram?.HapticFeedback?.impactOccurred("light");
   });
 
+  elements.theme.addEventListener("click", () => {
+    const nextTheme =
+      document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme, true);
+    telegram?.HapticFeedback?.selectionChanged();
+  });
+
   window.addEventListener("online", () => setStatus("Ready"));
   window.addEventListener("offline", () => setStatus("Offline", "error"));
-  telegram?.onEvent?.("themeChanged", refreshIcons);
+  telegram?.onEvent?.("themeChanged", () => {
+    if (!savedTheme()) setTheme(telegram.colorScheme);
+  });
 
+  setTheme(savedTheme() || telegram?.colorScheme || document.documentElement.dataset.theme);
   renderMessages();
   resizeInput();
   refreshIcons();
