@@ -83,7 +83,7 @@
 
     const mark = document.createElement("div");
     mark.className = "welcome-mark";
-    mark.innerHTML = '<i data-lucide="sparkles" data-fallback="✦"></i>';
+    mark.innerHTML = '<img src="/static/shadow-mentor.png" alt="">';
 
     const title = document.createElement("h2");
     title.textContent = `${greeting()}${user?.first_name ? `, ${user.first_name}` : ""}.`;
@@ -251,7 +251,7 @@
       const avatar = document.createElement("div");
       avatar.className = "assistant-avatar";
       avatar.setAttribute("aria-hidden", "true");
-      avatar.innerHTML = '<i data-lucide="sparkles" data-fallback="✦"></i>';
+      avatar.innerHTML = '<img src="/static/shadow-mentor.png" alt="">';
       row.appendChild(avatar);
     }
 
@@ -315,7 +315,7 @@
     row.id = "typingMessage";
     row.className = "message assistant";
     row.innerHTML = `
-      <div class="assistant-avatar" aria-hidden="true"><i data-lucide="sparkles" data-fallback="✦"></i></div>
+      <div class="assistant-avatar" aria-hidden="true"><img src="/static/shadow-mentor.png" alt=""></div>
       <div class="message-body">
         <div class="typing" aria-label="Shadow Mentor is thinking">
           <span></span><span></span><span></span>
