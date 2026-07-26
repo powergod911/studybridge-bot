@@ -90,6 +90,7 @@ def create_bot_application(settings: Settings) -> BotApplication:
         "deepseek_client": DeepSeekClient(settings.nvidia_api_key),
         "gemini_client": GeminiClient(settings.gemini_api_key),
         "settings": settings,
+        "rate_limit_redis": storage.redis,
     }
     return BotApplication(
         settings=settings,

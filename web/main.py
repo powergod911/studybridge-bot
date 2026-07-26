@@ -23,6 +23,7 @@ from bot.prompts import ChatTurn
 from bot.router import Engine, route_text
 from bot.runtime import BotApplication, create_bot_application, make_webhook_secret
 from web.auth import TelegramUser, require_telegram_user
+from web.image_validation import ImageValidationError, validate_image_bytes
 from web.rate_limit import enforce_rate_limit
 from web.schemas import ChatRequest, ChatResponse, HealthResponse
 
@@ -183,7 +184,7 @@ async def image_question(
     image: Annotated[UploadFile, File()],
     prompt: Annotated[
         str,
-        Form(min_length=1, max_length=4000),
+        Form(min_length=1, max_length=8000),
     ] = "Explain this study image step-by-step.",
 ) -> ChatResponse:
     settings: Settings = request.app.state.settings
@@ -202,6 +203,17 @@ async def image_question(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="Images must be 10 MB or smaller.",
         )
+
+    try:
+        validate_image_bytes(
+            image_bytes,
+            declared_content_type=image.content_type,
+        )
+    except ImageValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Upload a valid JPEG, PNG, or WebP image up to 25 megapixels.",
+        ) from exc
 
     db_sessionmaker: async_sessionmaker[AsyncSession] = request.app.state.db_sessionmaker
     await log_study_interaction_values(

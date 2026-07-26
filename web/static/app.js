@@ -35,6 +35,8 @@
     image: null,
     imageUrl: null,
     busy: false,
+    requestId: 0,
+    abortController: null,
   };
 
   if (!telegram?.initData) {
@@ -422,8 +424,14 @@
     const message = elements.input.value.trim();
     if ((!message && !state.image) || state.busy) return;
     let requestFailed = false;
+    const requestId = ++state.requestId;
+    const abortController = new AbortController();
+    state.abortController = abortController;
 
-    const history = state.messages.slice(-10);
+    const history = state.messages.slice(-10).map((turn) => ({
+      role: turn.role,
+      content: turn.content.slice(0, 6000),
+    }));
     const displayMessage = message || "Explain this image step-by-step.";
     state.messages.push({ role: "user", content: displayMessage });
     saveMessages();
@@ -447,6 +455,7 @@
           method: "POST",
           headers: { "X-Telegram-Init-Data": telegram?.initData || "" },
           body: form,
+          signal: abortController.signal,
         });
       } else {
         response = await fetch("/api/chat", {
@@ -460,11 +469,13 @@
             engine: state.engine,
             history,
           }),
+          signal: abortController.signal,
         });
       }
 
       if (!response.ok) throw new Error(await apiError(response));
       const data = await response.json();
+      if (requestId !== state.requestId) return;
       state.messages.push({ role: "assistant", content: data.answer });
       saveMessages();
       removeTyping();
@@ -475,6 +486,7 @@
       scrollToBottom(true);
       telegram?.HapticFeedback?.notificationOccurred("success");
     } catch (error) {
+      if (requestId !== state.requestId || error?.name === "AbortError") return;
       requestFailed = true;
       removeTyping();
       const messageText = error instanceof Error ? error.message : "Please try again.";
@@ -488,9 +500,12 @@
       telegram?.HapticFeedback?.notificationOccurred("error");
       scrollToBottom(true);
     } finally {
-      setBusy(false);
-      if (requestFailed) setStatus("Could not answer", "error");
-      elements.input.focus();
+      if (requestId === state.requestId) {
+        state.abortController = null;
+        setBusy(false);
+        if (requestFailed) setStatus("Could not answer", "error");
+        elements.input.focus();
+      }
     }
   }
 
@@ -538,6 +553,10 @@
   });
 
   elements.newChat.addEventListener("click", () => {
+    state.requestId += 1;
+    state.abortController?.abort();
+    state.abortController = null;
+    setBusy(false);
     state.messages = [];
     saveMessages();
     clearAttachment();

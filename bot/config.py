@@ -38,6 +38,7 @@ class Settings:
     dev_mode: bool
     telegram_auth_max_age_seconds: int
     web_rate_limit_per_minute: int
+    bot_rate_limit_per_minute: int
 
 
 def load_settings() -> Settings:
@@ -66,4 +67,5 @@ def load_settings() -> Settings:
         dev_mode=_as_bool(os.environ.get("SHADOW_MENTOR_DEV_MODE")),
         telegram_auth_max_age_seconds=int(os.environ.get("TELEGRAM_AUTH_MAX_AGE_SECONDS", "86400")),
         web_rate_limit_per_minute=int(os.environ.get("WEB_RATE_LIMIT_PER_MINUTE", "12")),
+        bot_rate_limit_per_minute=int(os.environ.get("BOT_RATE_LIMIT_PER_MINUTE", "12")),
     )

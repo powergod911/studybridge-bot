@@ -7,6 +7,7 @@ from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from bot.config import RULES_TEXT, Settings
@@ -101,12 +102,23 @@ async def deep(
     deepseek_client: DeepSeekClient,
     gemini_client: GeminiClient,
     db_sessionmaker: async_sessionmaker[AsyncSession],
+    rate_limit_redis: Redis,
+    settings: Settings,
 ) -> None:
     prompt = strip_command(message.text or "")
     if not prompt:
         await message.answer("Usage: /deep <question>")
         return
-    await answer_text_question(message, prompt, Engine.DEEPSEEK, deepseek_client, gemini_client, db_sessionmaker)
+    await answer_text_question(
+        message,
+        prompt,
+        Engine.DEEPSEEK,
+        deepseek_client,
+        gemini_client,
+        db_sessionmaker,
+        rate_limit_redis,
+        settings,
+    )
 
 
 @router.message(Command("gem"))
@@ -115,9 +127,20 @@ async def gem(
     deepseek_client: DeepSeekClient,
     gemini_client: GeminiClient,
     db_sessionmaker: async_sessionmaker[AsyncSession],
+    rate_limit_redis: Redis,
+    settings: Settings,
 ) -> None:
     prompt = strip_command(message.text or "")
     if not prompt:
         await message.answer("Usage: /gem <question>")
         return
-    await answer_text_question(message, prompt, Engine.GEMINI, deepseek_client, gemini_client, db_sessionmaker)
+    await answer_text_question(
+        message,
+        prompt,
+        Engine.GEMINI,
+        deepseek_client,
+        gemini_client,
+        db_sessionmaker,
+        rate_limit_redis,
+        settings,
+    )

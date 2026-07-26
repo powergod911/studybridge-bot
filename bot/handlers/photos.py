@@ -4,8 +4,10 @@ from io import BytesIO
 
 from aiogram import F, Bot, Router
 from aiogram.types import Message
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from bot.config import Settings
 from bot.engines.gemini import GeminiClient
 from bot.handlers.common import answer_photo_question
 from bot.router import route_photo
@@ -19,9 +21,19 @@ async def photo_message(
     bot: Bot,
     gemini_client: GeminiClient,
     db_sessionmaker: async_sessionmaker[AsyncSession],
+    rate_limit_redis: Redis,
+    settings: Settings,
 ) -> None:
     photo = message.photo[-1]
     buffer = BytesIO()
     await bot.download(photo, destination=buffer)
     route = route_photo(message.caption)
-    await answer_photo_question(message, route.prompt, buffer.getvalue(), gemini_client, db_sessionmaker)
+    await answer_photo_question(
+        message,
+        route.prompt,
+        buffer.getvalue(),
+        gemini_client,
+        db_sessionmaker,
+        rate_limit_redis,
+        settings,
+    )
