@@ -7,9 +7,11 @@ through a webhook, and routes questions to DeepSeek through NVIDIA NIM or Gemini
 ## What Students Get
 
 - A Telegram-native chat interface
+- Private, persistent conversation history with follow-up context
 - Properly rendered Markdown and LaTeX equations
 - DeepSeek, Gemini, or automatic model routing
-- Gemini image questions
+- Gemini image questions through upload, paste, or drag and drop
+- Distinct graphite-blue and white-gold themes
 - Sinhala and English answers
 - Plain-text fallback through ordinary bot messages
 
@@ -56,6 +58,7 @@ only when testing the UI locally.
 
 The application configures the Telegram webhook and chat menu button during startup.
 Only one Railway replica should be used unless webhook update deduplication is added.
+Railway's pre-deploy command applies the conversation-history migration automatically.
 
 ## BotFather
 

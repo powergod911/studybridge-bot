@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import hmac
 import logging
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, cast
+from uuid import UUID
 
 from aiogram.types import Update
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
@@ -23,14 +25,34 @@ from bot.prompts import ChatTurn
 from bot.router import Engine, route_text
 from bot.runtime import BotApplication, create_bot_application, make_webhook_secret
 from web.auth import TelegramUser, require_telegram_user
+from web.conversations import (
+    ConversationNotFoundError,
+    append_message,
+    delete_conversation,
+    ensure_conversation,
+    get_conversation,
+    list_conversations,
+    model_history,
+)
 from web.image_validation import ImageValidationError, validate_image_bytes
 from web.rate_limit import enforce_rate_limit
-from web.schemas import ChatRequest, ChatResponse, HealthResponse
+from web.schemas import (
+    ChatRequest,
+    ChatResponse,
+    ConversationDetail,
+    ConversationSummary,
+    HealthResponse,
+)
 
 logger = logging.getLogger(__name__)
 STATIC_DIR = Path(__file__).parent / "static"
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+FOLLOW_UP_RE = re.compile(
+    r"^\s*(why|how|then|next|continue|show me|what about|another|that|this|it|"
+    r"can you|could you|explain that|try again|ඇයි|කොහොමද|එතකොට|ඊළඟ|තව)\b",
+    re.IGNORECASE,
+)
 
 
 @asynccontextmanager
@@ -124,6 +146,69 @@ def _history_for_engine(request: ChatRequest) -> list[ChatTurn]:
     ]
 
 
+def _select_engine(
+    payload: ChatRequest,
+    *,
+    has_history: bool,
+    last_engine: Engine | None,
+) -> Engine:
+    if payload.engine != "auto":
+        return Engine(payload.engine)
+    if has_history and last_engine is not None and FOLLOW_UP_RE.search(payload.message):
+        return last_engine
+    return route_text(payload.message).engine
+
+
+@app.get("/api/conversations", response_model=list[ConversationSummary])
+async def conversation_list(
+    request: Request,
+    user: Annotated[TelegramUser, Depends(require_telegram_user)],
+) -> list[ConversationSummary]:
+    db_sessionmaker: async_sessionmaker[AsyncSession] = request.app.state.db_sessionmaker
+    return await list_conversations(db_sessionmaker, telegram_id=user.id)
+
+
+@app.get("/api/conversations/{conversation_id}", response_model=ConversationDetail)
+async def conversation_detail(
+    conversation_id: UUID,
+    request: Request,
+    user: Annotated[TelegramUser, Depends(require_telegram_user)],
+) -> ConversationDetail:
+    db_sessionmaker: async_sessionmaker[AsyncSession] = request.app.state.db_sessionmaker
+    try:
+        return await get_conversation(
+            db_sessionmaker,
+            telegram_id=user.id,
+            conversation_id=conversation_id,
+        )
+    except ConversationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        ) from exc
+
+
+@app.delete("/api/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def conversation_delete(
+    conversation_id: UUID,
+    request: Request,
+    user: Annotated[TelegramUser, Depends(require_telegram_user)],
+) -> Response:
+    db_sessionmaker: async_sessionmaker[AsyncSession] = request.app.state.db_sessionmaker
+    try:
+        await delete_conversation(
+            db_sessionmaker,
+            telegram_id=user.id,
+            conversation_id=conversation_id,
+        )
+    except ConversationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        ) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(
     payload: ChatRequest,
@@ -134,9 +219,37 @@ async def chat(
     redis_client: Redis = request.app.state.redis
     await enforce_rate_limit(redis_client, user.id, settings.web_rate_limit_per_minute)
 
-    route = route_text(payload.message)
-    engine = route.engine if payload.engine == "auto" else Engine(payload.engine)
     db_sessionmaker: async_sessionmaker[AsyncSession] = request.app.state.db_sessionmaker
+    try:
+        conversation_id = await ensure_conversation(
+            db_sessionmaker,
+            telegram_id=user.id,
+            conversation_id=payload.conversation_id,
+            first_message=payload.message,
+        )
+        stored_history, last_engine = await model_history(
+            db_sessionmaker,
+            telegram_id=user.id,
+            conversation_id=conversation_id,
+        )
+    except ConversationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        ) from exc
+
+    history = stored_history or _history_for_engine(payload)
+    engine = _select_engine(
+        payload,
+        has_history=bool(history),
+        last_engine=last_engine,
+    )
+    await append_message(
+        db_sessionmaker,
+        conversation_id=conversation_id,
+        role="user",
+        content=payload.message,
+    )
     await log_study_interaction_values(
         db_sessionmaker,
         telegram_id=user.id,
@@ -153,14 +266,14 @@ async def chat(
             answer = await client.answer(
                 payload.message,
                 channel="web",
-                history=_history_for_engine(payload),
+                history=history,
             )
         else:
             client = request.app.state.gemini_client
             answer = await client.answer(
                 payload.message,
                 channel="web",
-                history=_history_for_engine(payload),
+                history=history,
             )
     except AIBusyError as exc:
         raise HTTPException(
@@ -174,7 +287,18 @@ async def chat(
             detail="Shadow Mentor could not answer that question.",
         ) from exc
 
-    return ChatResponse(answer=answer, engine=engine.value)
+    await append_message(
+        db_sessionmaker,
+        conversation_id=conversation_id,
+        role="assistant",
+        content=answer,
+        engine=engine,
+    )
+    return ChatResponse(
+        answer=answer,
+        engine=engine.value,
+        conversation_id=conversation_id,
+    )
 
 
 @app.post("/api/image", response_model=ChatResponse)
@@ -186,6 +310,7 @@ async def image_question(
         str,
         Form(min_length=1, max_length=8000),
     ] = "Explain this study image step-by-step.",
+    conversation_id: Annotated[UUID | None, Form()] = None,
 ) -> ChatResponse:
     settings: Settings = request.app.state.settings
     redis_client: Redis = request.app.state.redis
@@ -216,6 +341,32 @@ async def image_question(
         ) from exc
 
     db_sessionmaker: async_sessionmaker[AsyncSession] = request.app.state.db_sessionmaker
+    try:
+        active_conversation_id = await ensure_conversation(
+            db_sessionmaker,
+            telegram_id=user.id,
+            conversation_id=conversation_id,
+            first_message=prompt,
+            has_image=True,
+        )
+        history, _ = await model_history(
+            db_sessionmaker,
+            telegram_id=user.id,
+            conversation_id=active_conversation_id,
+        )
+    except ConversationNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        ) from exc
+
+    await append_message(
+        db_sessionmaker,
+        conversation_id=active_conversation_id,
+        role="user",
+        content=prompt,
+        has_image=True,
+    )
     await log_study_interaction_values(
         db_sessionmaker,
         telegram_id=user.id,
@@ -228,7 +379,12 @@ async def image_question(
 
     try:
         client: GeminiClient = request.app.state.gemini_client
-        answer = await client.answer_image(prompt, image_bytes, channel="web")
+        answer = await client.answer_image(
+            prompt,
+            image_bytes,
+            channel="web",
+            history=history,
+        )
     except AIBusyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -241,4 +397,15 @@ async def image_question(
             detail="Shadow Mentor could not read that image.",
         ) from exc
 
-    return ChatResponse(answer=answer, engine="gemini")
+    await append_message(
+        db_sessionmaker,
+        conversation_id=active_conversation_id,
+        role="assistant",
+        content=answer,
+        engine=Engine.GEMINI,
+    )
+    return ChatResponse(
+        answer=answer,
+        engine="gemini",
+        conversation_id=active_conversation_id,
+    )
